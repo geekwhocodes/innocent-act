@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	_ "github.com/labstack/echo"
 	_ "github.com/lib/pq"
@@ -33,25 +37,25 @@ func main() {
 	app := &App{
 		db: initDb(),
 	}
-	initHTTPServer(app)
-	// // Start HTTP server
-	// server := initHTTPServer(app)
+	sigs := make(chan os.Signal, 1)
+	quitSing := make(chan bool, 1)
+	// Start HTTP server
+	server := initHTTPServer(app)
 
-	// app.signalChan = make(chan os.Signal)
-	// signal.Notify(app.signalChan, syscall.SIGINT, syscall.SIGQUIT)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	// // Quit gracefully
-	// go func() {
-	// 	quitSig := <-app.signalChan
-	// 	fmt.Println(quitSig)
-	// 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	// 	fmt.Println("Shutting down web server")
-	// 	server.Shutdown(ctx)
-	// 	defer cancel()
-	// 	fmt.Print("Closing Db")
-	// 	app.db.Close()
-	// 	fmt.Print("Exiting...")
-	// 	app.signalChan <- syscall.SIGINT
-	// }()
-	// <-app.signalChan
+	// Quit gracefully
+	go func() {
+		sig := <-sigs
+		fmt.Println(sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		fmt.Println("Shutting down web server")
+		server.Shutdown(ctx)
+		defer cancel()
+		fmt.Print("Closing Db")
+		app.db.Close()
+		fmt.Print("Exiting...")
+		quitSing <- true
+	}()
+	<-quitSing
 }
