@@ -1,2 +1,2 @@
-# innocent-act
-My first Go App
+# Innocent-Act
+My first Golang app
