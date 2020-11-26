@@ -1,15 +1,14 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	_ "github.com/labstack/echo"
+	"github.com/geekwhocodes/innocent-relay/internal/store"
+	"github.com/knadh/koanf"
+	echo "github.com/labstack/echo"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,45 +16,41 @@ import (
 // App represents lowkey app's context
 type App struct {
 	//log *log.Logger
-	db *sql.DB
+	c      *Config
+	server *echo.Echo
+	store  store.Store
 	// channel to handle gracefull shutdown
 	signalChan chan os.Signal
+	quitSign   chan bool
 }
 
 var (
-	db      *sql.DB
-	build   string
-	version string
+	//db      *sql.DB
+	build      string
+	version    string
+	configPath string
+	k          = koanf.New(".")
 )
 
 func init() {
-	// TODO : check schema
+	initFlags()
+	initConfig()
 }
 
 func main() {
 	fmt.Println("This is my lowkey app.")
+
 	app := &App{
-		db: initDb(),
+		//c: initConfig(),
+		store: initDbStore(),
 	}
-	sigs := make(chan os.Signal, 1)
-	quitSing := make(chan bool, 1)
+
 	// Start HTTP server
-	server := initHTTPServer(app)
+	app.server = initHTTPServer(app)
 
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
+	app.signalChan = make(chan os.Signal, 1)
+	app.quitSign = make(chan bool, 1)
+	signal.Notify(app.signalChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	// Quit gracefully
-	go func() {
-		sig := <-sigs
-		fmt.Println(sig)
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		fmt.Println("Shutting down web server")
-		server.Shutdown(ctx)
-		defer cancel()
-		fmt.Print("Closing Db")
-		app.db.Close()
-		fmt.Print("Exiting...")
-		quitSing <- true
-	}()
-	<-quitSing
+	quit(app)
 }

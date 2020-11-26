@@ -1,81 +1,94 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/gchaincl/dotsql"
+	"github.com/geekwhocodes/innocent-relay/internal/store"
+	"github.com/geekwhocodes/innocent-relay/internal/store/providers/sqlite"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/file"
+	flag "github.com/spf13/pflag"
+
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
 
-func initDb() *sql.DB {
-	db, err := connectDb()
-	if err != nil {
-		log.Fatal(err)
+func initFlags() {
+	//
+	// Use the POSIX compliant pflag lib instead of Go's flag lib.
+	configCmd := flag.NewFlagSet("config", flag.ContinueOnError)
+	configCmd.Usage = func() {
+		fmt.Println(configCmd.FlagUsages())
+		os.Exit(0)
 	}
-	return db
+	// Path to one or more config files to load into koanf along with some config params.
+	yamlFilePath := configCmd.String("f", "./config.yml", "path to one or more .yml config file")
+	// Actually parse the flags
+	if err := configCmd.Parse(os.Args[:1]); err != nil {
+		log.Fatalf("error loading flags: %v", err)
+	}
+	yamlFile := file.Provider(*yamlFilePath)
+	if err := k.Load(yamlFile, yaml.Parser()); err != nil {
+		log.Fatalf("error loading file: %v", err)
+	}
+	// Watch the file and get a callback on change. The callback can do whatever,
+	// like re-load the configuration.
+	// File provider always returns a nil `event`.
+	// yamlFile.Watch(func(event interface{}, err error) {
+	// 	if err != nil {
+	// 		log.Printf("watch error: %v", err)
+	// 		return
+	// 	}
+
+	// 	log.Println("config changed. Reloading ...")
+	// 	k.Load(yamlFile, yaml.Parser())
+	// 	k.Print()
+	// })
+
+	// // Block forever (and manually make a change to mock/mock.json) to
+	// // reload the config.
+	// log.Printf("listening changes to %s to live reload", *yamlFilePath)
+	// <-make(chan bool)
 }
 
-func connectDb() (*sql.DB, error) {
-	var err error
+func initConfig() *Config {
+	// Create config structure
+	config := &Config{}
+	if err := k.Unmarshal("host", &config.Host); err != nil {
+		log.Fatalf("error loading app config: %v", err)
+	}
+	if err := k.Unmarshal("port", &config.Port); err != nil {
+		log.Fatalf("error loading app config: %v", err)
+	}
+	if err := k.Unmarshal("db", &config.Db); err != nil {
+		log.Fatalf("error loading app config: %v", err)
+	}
 
-	if fileExists("./lowkey.db") {
-		if err := os.Remove("./lowkey.db"); err != nil {
-			panic(err)
+	return config
+}
+
+func initDbStore() store.Store {
+	switch provider := k.String("db.provider"); provider {
+	case "sqlite":
+		{
+			// Init sqlite with sqlite options
+			var options sqlite.Options
+			k.Unmarshal("db.sqlite", &options)
+			dbStore, err := sqlite.NewDb(&options)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return dbStore
 		}
+	default:
+		log.Fatalf("unknown db provider. select sqlite")
 	}
-
-	db, err := sql.Open("sqlite3", "./lowkey.db")
-	if err := createSchema(db); err != nil {
-		panic(err)
-	}
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-
-	if err = db.Ping(); err != nil {
-		panic(err)
-	} else {
-		fmt.Println("DB Connected...")
-	}
-	return db, nil
-}
-
-func createSchema(db *sql.DB) error {
-	dot, err := dotsql.LoadFromFile("schema.sql")
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-	// check table exists
-	stmt, err := dot.Prepare(db, "create-users-table")
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	if _, err := stmt.Exec(); err != nil {
-		return err
-	}
-
-	if _, err := dot.Exec(db, "create-user", "Ganesh0", "raskar", "email@mail.com", "https://kl.kl", nil, nil); err != nil {
-		return err
-	}
-
 	return nil
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
 
 func initHTTPServer(app *App) *echo.Echo {
@@ -107,6 +120,15 @@ func initHTTPServer(app *App) *echo.Echo {
 	return e
 }
 
-func quit(c *chan os.Signal) {
-
+//
+func quit(app *App) {
+	sig := <-app.signalChan
+	fmt.Println("Quiting due to :", sig)
+	fmt.Println("Closing Db")
+	//app.store.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	fmt.Println("Shutting down web server")
+	app.server.Shutdown(ctx)
+	defer cancel()
+	fmt.Println("Exiting...")
 }
