@@ -1,15 +1,15 @@
 package sqlite
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/gchaincl/dotsql"
 	"github.com/geekwhocodes/innocent-relay/models"
+	"github.com/jmoiron/sqlx"
+	"gopkg.in/volatiletech/null.v6"
 )
 
 // Options .
@@ -20,7 +20,7 @@ type Options struct {
 
 // Client implements `store.Store`
 type Client struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 // GetEmail .s
@@ -31,19 +31,46 @@ func (store *Client) GetEmail() string {
 // CreateUser .s
 func (store *Client) CreateUser(u *models.User) (*models.User, error) {
 	fmt.Println("Creating user.", u.Name())
-	sqlStatement := "INSERT INTO users (firstname, lastname, email, website, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := store.db.Exec(sqlStatement, u.FirstName, u.LastName, u.Email, u.Website, time.Now().UTC().String(), time.Now().UTC().String())
+	sqlStatement, _ := store.db.Prepare("INSERT INTO users (firstname, lastname, email, website, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)")
+	u.CreatedAt, u.UpdatedAt = null.NewTime(time.Now(), true), null.NewTime(time.Now(), true)
+	result, err := sqlStatement.Exec(u.FirstName, u.LastName, u.Email, u.Website, u.CreatedAt, u.UpdatedAt)
 	if err != nil {
 		log.Fatal(err)
-		return u, err
+		return nil, err
 	}
+	id, _ := result.LastInsertId()
+	u.ID = int(id)
 	return u, nil
 }
 
-// GetAllUsers creates user in db
+// GetAllUsers returns all users in db
 func (store *Client) GetAllUsers() ([]*models.User, error) {
 	sqlStatement := "SELECT * FROM users"
 	rows, err := store.db.Query(sqlStatement)
+	result := []*models.User{}
+	if err != nil {
+		log.Fatal(err)
+		return result, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		user := &models.User{}
+		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Website, &user.CreatedAt, &user.UpdatedAt); err != nil {
+			log.Fatal(err)
+		}
+		result = append(result, user)
+	}
+	return result, nil
+}
+
+// GetPaginatedUsers returns paginated results
+func (store *Client) GetPaginatedUsers(page int) ([]*models.User, error) {
+	limit := 10
+	offset := limit * (page - 1)
+
+	sqlStatement := `SELECT * FROM "users" ORDER BY "id" LIMIT $1 OFFSET $2`
+	rows, err := store.db.Queryx(sqlStatement, limit, offset)
 	result := []*models.User{}
 	if err != nil {
 		log.Fatal(err)
@@ -79,11 +106,13 @@ func NewDb(options *Options) (*Client, error) {
 			return nil, err
 		}
 	}
-	db, err := sql.Open("sqlite3", dbPath)
-	if err := createSchema(db); err != nil {
+	db, err := sqlx.Connect("sqlite3", dbPath)
+	if err != nil {
+		log.Fatalln(err)
 		return nil, err
 	}
-	if err != nil {
+	if err := createSchema(db); err != nil {
+		log.Fatalln(err)
 		return nil, err
 	}
 	if err = db.Ping(); err != nil {
@@ -105,26 +134,18 @@ func validatePath(path string) error {
 	return nil
 }
 
-func createSchema(db *sql.DB) error {
-	dot, err := dotsql.LoadFromFile("schema.sql")
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-	// check table exists
-	stmt, err := dot.Prepare(db, "create-users-table")
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	if _, err := stmt.Exec(); err != nil {
-		return err
-	}
-
-	if _, err := dot.Exec(db, "create-user", "Ganesh", "raskar", "email@mail.com", "https://kl.in", nil, nil); err != nil {
-		return err
-	}
-
+func createSchema(db *sqlx.DB) error {
+	var schema = `
+		DROP TABLE IF EXISTS user;
+		CREATE TABLE users (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				firstname VARCHAR(64) NULL,
+				lastname VARCHAR(64) NULL,
+				email VARCHAR(64) NULL,
+				website VARCHAR(32) NULL,
+				createdAt DATE NULL,
+				updatedAt DATE NULL
+		);`
+	db.MustExec(schema)
 	return nil
 }

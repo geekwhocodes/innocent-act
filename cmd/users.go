@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/geekwhocodes/innocent-relay/models"
 	"github.com/labstack/echo"
@@ -22,43 +24,23 @@ func handlerCreateUser(c echo.Context) error {
 
 func handlerGetUsers(c echo.Context) error {
 	app := c.Get("app").(*App)
-	users, err := app.store.GetAllUsers()
+	pageStr := c.QueryParam("page")
+	if pageStr == "" {
+		users, err := app.store.GetAllUsers()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, "error")
+		}
+		return c.JSON(http.StatusOK, users)
+	}
+	pageNo, err := strconv.Atoi(pageStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	users, err := app.store.GetPaginatedUsers(pageNo)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "error")
 	}
+	// c.Response().Header().Add("X-Next-Link", c.Request().RequestURI)
+	// c.Response().Header().Add("Access-Control-Expose-Headers", "X-Next-Link")
 	return c.JSON(http.StatusOK, users)
 }
-
-// // CreateUser creates user in db
-// func createUser(u models.User, db *sql.DB) (models.User, error) {
-// 	fmt.Println("Creating user.", u.Name())
-// 	sqlStatement := "INSERT INTO users (firstname, lastname, email, website, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
-// 	res, err := db.Exec(sqlStatement, u.FirstName, u.LastName, u.Email, u.Website, time.Now().UTC().String(), time.Now().UTC().String())
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return u, err
-// 	}
-// 	fmt.Println(*&res)
-// 	return u, nil
-// }
-
-// // GetUsers returns all users
-// func getUsers(db *sql.DB) (models.Users, error) {
-// 	sqlStatement := "SELECT * FROM users"
-// 	rows, err := db.Query(sqlStatement)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return models.Users{}, err
-// 	}
-// 	defer rows.Close()
-// 	result := models.Users{}
-
-// 	for rows.Next() {
-// 		user := models.User{}
-// 		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Website, &user.CreatedAt, &user.UpdatedAt); err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		result.Users = append(result.Users, user)
-// 	}
-// 	return result, nil
-// }
