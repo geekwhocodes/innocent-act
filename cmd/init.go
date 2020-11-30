@@ -27,7 +27,7 @@ func initFlags() {
 		os.Exit(0)
 	}
 	// Path to one or more config files to load into koanf along with some config params.
-	yamlFilePath := configCmd.String("f", "./config.yml", "path to one or more .yml config file")
+	yamlFilePath := configCmd.String("f", "./config.yaml", "path to one or more .yml config file")
 	// Actually parse the flags
 	if err := configCmd.Parse(os.Args[:1]); err != nil {
 		log.Fatalf("error loading flags: %v", err)
@@ -36,24 +36,6 @@ func initFlags() {
 	if err := k.Load(yamlFile, yaml.Parser()); err != nil {
 		log.Fatalf("error loading file: %v", err)
 	}
-	// Watch the file and get a callback on change. The callback can do whatever,
-	// like re-load the configuration.
-	// File provider always returns a nil `event`.
-	// yamlFile.Watch(func(event interface{}, err error) {
-	// 	if err != nil {
-	// 		log.Printf("watch error: %v", err)
-	// 		return
-	// 	}
-
-	// 	log.Println("config changed. Reloading ...")
-	// 	k.Load(yamlFile, yaml.Parser())
-	// 	k.Print()
-	// })
-
-	// // Block forever (and manually make a change to mock/mock.json) to
-	// // reload the config.
-	// log.Printf("listening changes to %s to live reload", *yamlFilePath)
-	// <-make(chan bool)
 }
 
 func initConfig() *Config {
@@ -94,6 +76,8 @@ func initDbStore() store.Store {
 func initHTTPServer(app *App) *echo.Echo {
 
 	e := echo.New()
+	e.HideBanner = true
+
 	e.Use(middleware.CORS())
 
 	// Inject our App context to all http handlers
@@ -108,7 +92,7 @@ func initHTTPServer(app *App) *echo.Echo {
 
 	// Start the server.
 	go func() {
-		if err := e.Start(":8081"); err != nil {
+		if err := e.Start(":" + k.String("port")); err != nil {
 			if strings.Contains(err.Error(), "Server closed") {
 				log.Println("HTTP server shut down")
 			} else {

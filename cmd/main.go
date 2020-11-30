@@ -16,7 +16,6 @@ import (
 // App represents lowkey app's context
 type App struct {
 	//log *log.Logger
-	c      *Config
 	server *echo.Echo
 	store  store.Store
 	// channel to handle gracefull shutdown
@@ -41,7 +40,6 @@ func main() {
 	fmt.Println("This is my lowkey app.")
 
 	app := &App{
-		//c: initConfig(),
 		store: initDbStore(),
 	}
 
