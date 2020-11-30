@@ -1,0 +1,9 @@
+# config.yml
+
+host: localhost
+port: 8081
+db:
+  provider: sqlite
+  sqlite:
+    name: lowkey
+    path: 
