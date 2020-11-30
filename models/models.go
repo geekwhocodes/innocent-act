@@ -30,6 +30,6 @@ type Users struct {
 }
 
 // Name returns Full name of user by concating first & last name
-func (u *User) Name() string {
-	return fmt.Sprintf("%s %s", *&u.FirstName, *&u.LastName)
+func (u User) Name() string {
+	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
 }
