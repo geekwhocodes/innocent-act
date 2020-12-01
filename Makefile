@@ -16,7 +16,7 @@ BIN := innocent-act.exe
 LDFLAGS := -s -w -X 'main.buildString=${BUILD}' -X 'main.versionString=${VERSION}' # -X 'main.buildDate=${BUILD_DATE}'
 
 # Static files to stuff in 
-STATIC := config.yaml
+STATIC := config.sample.yaml
 
 # Dependencies
 .PHONY: deps

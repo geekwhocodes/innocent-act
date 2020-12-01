@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -10,8 +12,11 @@ import (
 
 	"github.com/geekwhocodes/innocent-relay/internal/store"
 	"github.com/geekwhocodes/innocent-relay/internal/store/providers/sqlite"
+	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/posflag"
+	"github.com/knadh/stuffbin"
 	flag "github.com/spf13/pflag"
 
 	"github.com/labstack/echo"
@@ -21,37 +26,75 @@ import (
 func initFlags() {
 	//
 	// Use the POSIX compliant pflag lib instead of Go's flag lib.
-	configCmd := flag.NewFlagSet("config", flag.ContinueOnError)
-	configCmd.Usage = func() {
-		fmt.Println(configCmd.FlagUsages())
+	f := flag.NewFlagSet("config", flag.ContinueOnError)
+	f.Usage = func() {
+		// --help
+		fmt.Println(f.FlagUsages())
 		os.Exit(0)
 	}
-	// Path to one or more config files to load into koanf along with some config params.
-	yamlFilePath := configCmd.String("f", "./config.yaml", "path to one or more .yml config file")
-	// Actually parse the flags
-	if err := configCmd.Parse(os.Args[:1]); err != nil {
-		log.Fatalf("error loading flags: %v", err)
+
+	// register commands
+	f.Bool("version", false, "current version of the build")
+	f.Bool("sample-config", false, "generate new config file.")
+	if err := f.Parse(os.Args[1:]); err != nil {
+		log.Fatalf("error reading flags: %v", err)
 	}
-	yamlFile := file.Provider(*yamlFilePath)
-	if err := k.Load(yamlFile, yaml.Parser()); err != nil {
-		log.Fatalf("error loading file: %v", err)
+
+	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		log.Fatalf("error reading config: %v", err)
 	}
+
 }
 
-func initConfig() *Config {
-	// Create config structure
-	config := &Config{}
-	if err := k.Unmarshal("host", &config.Host); err != nil {
-		log.Fatalf("error loading app config: %v", err)
-	}
-	if err := k.Unmarshal("port", &config.Port); err != nil {
-		log.Fatalf("error loading app config: %v", err)
-	}
-	if err := k.Unmarshal("db", &config.Db); err != nil {
-		log.Fatalf("error loading app config: %v", err)
+func initFS(dir string) stuffbin.FileSystem {
+	// Get the executable's path.
+	path, err := os.Executable()
+	if err != nil {
+		log.Fatalf("error getting executable path: %v", err)
 	}
 
-	return config
+	// Load the static files stuffed in the binary.
+	fs, err := stuffbin.UnStuff(path)
+	if err != nil {
+		// Running in local mode. Load local assets into
+		// the in-memory stuffbin.FileSystem.
+		log.Printf("unable to initialize embedded filesystem: %v", err)
+		files := []string{
+			"config.sample.yaml",
+		}
+
+		fs, err = stuffbin.NewLocalFS("/", files...)
+		if err != nil {
+			log.Fatalf("failed to initialize local fs: %v", err)
+		}
+	}
+	return fs
+}
+
+func generateNewConfig() error {
+	if _, err := os.Stat("config.toml"); !os.IsNotExist(err) {
+		return errors.New("config.yaml already exists. Remove it to generate a new one")
+	}
+
+	// Initialize the static file system into which all
+	// required static assets (.sql, .js files etc.) are loaded.
+	fs := initFS("")
+	b, err := fs.Read("config.sample.yaml")
+	if err != nil {
+		return fmt.Errorf("error reading sample config: %v", err)
+	}
+
+	return ioutil.WriteFile("config.yaml", b, 0644)
+}
+
+func initConfig(k *koanf.Koanf) {
+	yamlFile := file.Provider("./config.yaml")
+	if err := k.Load(yamlFile, yaml.Parser()); err != nil {
+		if os.IsNotExist(err) {
+			log.Fatal("Config file not found. You can generate new one by running --sample-config command")
+		}
+		log.Fatalf("error loading file: %v", err)
+	}
 }
 
 func initDbStore() store.Store {
@@ -115,4 +158,16 @@ func quit(app *App) {
 	app.server.Shutdown(ctx)
 	defer cancel()
 	fmt.Println("Exiting...")
+}
+
+func getVersion(v string, b string) string {
+	s := fmt.Sprintf(`
+#      ____                                  __                __ 
+#     /  _/___  ____  ____  ________  ____  / /_   ____ ______/ /_
+#     / // __ \/ __ \/ __ \/ ___/ _ \/ __ \/ __/  / __ / ___/ __/
+#   _/ // / / / / / / /_/ / /__/  __/ / / / /_   / /_/ / /__/ /_  
+#  /___/_/ /_/_/ /_/\____/\___/\___/_/ /_/\__/   \__,_/\___/\__/
+#  							  
+#  %s %s`, v, b)
+	return s
 }
