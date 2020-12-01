@@ -29,20 +29,26 @@ type App struct {
 var (
 	k = koanf.New(".")
 
-	build   string
-	version string
+	buildString   string
+	versionString string
 )
 
 func init() {
-	build = "0cfde"   // Read from somewhere else
-	version = "0.1.0" // Read from somewhere else
 	initFlags()
 }
 
 func main() {
 	// Handle arg flags/commands
 	if k.Bool("version") {
-		fmt.Print(getVersion(version, build))
+		fmt.Print(getVersion(versionString, buildString))
+		fmt.Println()
+		fmt.Println()
+		os.Exit(0)
+	}
+
+	// Handle arg flags/commands
+	if k.String("config-file") == "" {
+		fmt.Print(getVersion(versionString, buildString))
 		fmt.Println()
 		fmt.Println()
 		os.Exit(0)

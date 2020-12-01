@@ -26,9 +26,9 @@ import (
 func initFlags() {
 	//
 	// Use the POSIX compliant pflag lib instead of Go's flag lib.
-	f := flag.NewFlagSet("config", flag.ContinueOnError)
+	f := flag.NewFlagSet("config", flag.ExitOnError)
 	f.Usage = func() {
-		// --help
+		// show help
 		fmt.Println(f.FlagUsages())
 		os.Exit(0)
 	}
@@ -36,6 +36,7 @@ func initFlags() {
 	// register commands
 	f.Bool("version", false, "current version of the build")
 	f.Bool("sample-config", false, "generate new config file.")
+	f.String("config-file", "config.yaml", "Configuration file path. Generate new one by running --sample-config")
 	if err := f.Parse(os.Args[1:]); err != nil {
 		log.Fatalf("error reading flags: %v", err)
 	}
@@ -88,7 +89,8 @@ func generateNewConfig() error {
 }
 
 func initConfig(k *koanf.Koanf) {
-	yamlFile := file.Provider("./config.yaml")
+	confFile := k.String("config-file")
+	yamlFile := file.Provider(confFile)
 	if err := k.Load(yamlFile, yaml.Parser()); err != nil {
 		if os.IsNotExist(err) {
 			log.Fatal("Config file not found. You can generate new one by running --sample-config command")
@@ -135,7 +137,7 @@ func initHTTPServer(app *App) *echo.Echo {
 
 	// Start the server.
 	go func() {
-		if err := e.Start(":" + k.String("port")); err != nil {
+		if err := e.Start(k.String("host") + ":" + k.String("port")); err != nil {
 			if strings.Contains(err.Error(), "Server closed") {
 				log.Println("HTTP server shut down")
 			} else {
@@ -152,7 +154,7 @@ func quit(app *App) {
 	sig := <-app.signalChan
 	fmt.Println("Quiting due to :", sig)
 	fmt.Println("Closing Db")
-	//app.store.Close()
+	app.store.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	fmt.Println("Shutting down web server")
 	app.server.Shutdown(ctx)
