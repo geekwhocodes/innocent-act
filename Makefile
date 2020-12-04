@@ -12,8 +12,11 @@ BUILD_DATE := $(shell date '+%Y-%m-%d %H:%M:%S')
 BUILD := ${LAST_COMMIT}
 
 # Binary spec 
-BIN := innocent-act.exe
+BIN := innocent-act
 LDFLAGS := -s -w -X 'main.buildString=${BUILD}' -X 'main.versionString=${VERSION}' # -X 'main.buildDate=${BUILD_DATE}'
+
+GOOS="linux"
+GOARCH="amd64"
 
 # Static files to stuff in 
 STATIC := config.sample.yaml
@@ -23,9 +26,14 @@ STATIC := config.sample.yaml
 deps:
 	${GOGET} -u github.com/knadh/stuffbin/...
 
-# Build the binary ${BIN} 
-.PHONY: build
-build: 
+# Build the binary ${BIN} for windows
+.PHONY: build-win
+ build-win: 
+	${GOBUILD} -o ${BIN}.exe -ldflags="${LDFLAGS}" ./cmd
+
+# Build the binary ${BIN} for linux
+.PHONY: build-linux
+ build-linux:
 	${GOBUILD} -o ${BIN} -ldflags="${LDFLAGS}" ./cmd
 
 # Run tests.
@@ -52,5 +60,11 @@ stuffin:
 # Bundle all static assets including the JS frontend into the ./listmonk binary
 # using stuffbin (installed with make deps).
 .PHONY: all
-all: build stuffin
+all: build-win stuffin
+	stuffbin -a stuff -in ${BIN} -out ${BIN} ${STATIC}
+
+# Bundle all static assets including the JS frontend into the ./listmonk binary
+# using stuffbin (installed with make deps).
+.PHONY: all-linux
+all: build-linux stuffin
 	stuffbin -a stuff -in ${BIN} -out ${BIN} ${STATIC}
