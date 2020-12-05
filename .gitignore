@@ -11,8 +11,21 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+
+#web 
+.vscode/
+node_modules
+web/node_modules
+web/build
+web/yarn.lock
+web/.cache/
+web/dist
+
+
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 *.db
 config.yaml
 vendor
+innocent-act
