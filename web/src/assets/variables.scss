@@ -1,0 +1,30 @@
+/* Import Bulma to set variables */
+@import "~bulma/sass/utilities/_all";
+
+$body-family: "Helvetica Neue", sans-serif;
+$body-size: 15px;
+$background: $white-bis;
+$body-background-color: $white-bis;
+$primary: #63a1ff;
+$green: #4caf50;
+$turquoise: $green;
+$red: #d13438;
+$link: $primary;
+$input-placeholder-color: $grey-light;
+$grey-lightest: #eaeaea;
+
+$colors: map-merge($colors, (
+    "turquoise": ($green, $green-invert),
+    "green": ($green, $green-invert),
+    "success": ($green, $green-invert),
+    "danger": ($red, $green-invert),
+));
+
+$menu-item-active-background-color: $white-bis;
+$menu-item-active-color: $primary;
+
+
+:export {
+    primaryColor: $primary;
+    backgroundColor: $background;
+}

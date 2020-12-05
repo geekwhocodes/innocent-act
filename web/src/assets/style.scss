@@ -1,0 +1,160 @@
+@import "./variables.scss";
+
+
+/* Import full Bulma and Buefy to override styles. */
+// @import "~bulma";
+@import "./buefy";
+
+html, body {
+    height: 100%;
+  }
+  
+  code {
+    color: $grey;
+  }
+  
+  pre {
+    background: none;
+    border: 1px solid $grey-lightest;
+  }
+  
+  ul.no {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .relative {
+    position: relative;
+  }
+  
+  section {
+    &.wrap {
+      max-width: 1100px;
+    }
+    &.wrap-small {
+      max-width: 900px;
+    }
+  }
+
+
+#app {
+    min-height: 100%;
+    .wrapper {
+      display: flex;
+      flex-direction: row;
+      min-height: 100vh;
+      margin-top: 0px;
+    }
+    .main {
+      background: $white;
+      margin-left: auto;
+      padding: 30px;
+      flex-grow: 1;
+      position: relative;
+    }
+  }
+
+  .navbar {
+    box-shadow: 0 0 3px $grey-lighter;
+  }
+  .navbar-brand {
+    padding: 0 0 0 25px;
+    .favicon {
+      display: none;
+    }
+    .full {
+      max-height: 17px;
+      margin-top: 15px;
+    }
+    .favicon {
+      margin-top: 12px;
+      max-height: 24px;
+    }
+  }
+  
+  .navigation {
+    position: sticky;
+    top: 60px;
+  }
+
+  .navbar-start {
+    margin-left: 15rem;
+    .router-link-exact-active {
+      border-bottom: 2px solid $menu-item-active-color;
+      color: $menu-item-active-color;
+      outline: 0 none;
+    }
+    li ul {
+      margin-right: 0;
+    }
+    > li {
+      margin-bottom: 5px;
+      a {
+        padding-left: 25px;
+      }
+    }
+    a {
+      border-radius: 0;
+    }
+  }
+  
+@media screen and (max-width: 1023px) {
+  html, body {
+    overflow-x: auto;
+  }
+
+  #app .main {
+    margin-left: 5px;
+    padding: 30px 20px 30px 20px;
+  }
+
+  .navbar-brand {
+    .full {
+      display: none;
+    }
+    .favicon {
+      display: block;
+    }
+    padding-left: 10px;
+  }
+
+  .navbar-start {
+    margin-left: auto;
+    .router-link-exact-active {
+      border-bottom: none;
+      color: $primary;
+      outline: 0 none;
+    }
+    li ul {
+      margin-right: 0;
+    }
+    > li {
+      margin-bottom: 5px;
+      a {
+        padding-left: 25px;
+      }
+    }
+    a {
+      border-radius: 0;
+    }
+  }
+
+  td .tags {
+    display: block;
+    text-align: right;
+
+    .tag:not(:last-child) {
+      margin-right: 0;
+    }
+  }
+}
+
+@media screen and (max-width: 840px) {
+  section.dashboard label {
+    min-width: auto;
+  }
+  .table-mobile-sort {
+    margin-top: 15px;
+  }
+}
