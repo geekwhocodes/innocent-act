@@ -19,12 +19,18 @@ GOOS="linux"
 GOARCH="amd64"
 
 # Static files to stuff in 
-STATIC := config.sample.yaml
+STATIC := config.sample.yaml \
+	web/dist/web:web \
+	web/dist/favicon.ico:/web/favicon.ico \
+
+VUE_APP_VERSION=${VERSION}
+
 
 # Dependencies
 .PHONY: deps
 deps:
 	${GOGET} -u github.com/knadh/stuffbin/...
+	cd web && yarn install
 
 # Build the binary ${BIN} for windows
 .PHONY: build-win
@@ -35,6 +41,11 @@ deps:
 .PHONY: build-linux
  build-linux:
 	${GOBUILD} -o ${BIN} -ldflags="${LDFLAGS}" ./cmd
+
+# Build vue app at web/dist
+.PHONY: build-frontend
+build-frontend:
+	cd web && yarn build
 
 # Run tests.
 .PHONY: test
@@ -60,11 +71,11 @@ stuffin:
 # Bundle all static assets including the JS frontend into the ./listmonk binary
 # using stuffbin (installed with make deps).
 .PHONY: all
-all: build-win stuffin
+all: build-win build-frontend stuffin
 	stuffbin -a stuff -in ${BIN} -out ${BIN} ${STATIC}
 
 # Bundle all static assets including the JS frontend into the ./listmonk binary
 # using stuffbin (installed with make deps).
 .PHONY: all-linux
-all: build-linux stuffin
+all: build-linux build-frontend stuffin
 	stuffbin -a stuff -in ${BIN} -out ${BIN} ${STATIC}
