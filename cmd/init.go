@@ -62,6 +62,8 @@ func initFS(dir string) stuffbin.FileSystem {
 		log.Printf("unable to initialize embedded filesystem: %v", err)
 		files := []string{
 			"config.sample.yaml",
+			"web/dist/web:web",
+			"web/dist/favicon.ico:/web/favicon.ico",
 		}
 
 		fs, err = stuffbin.NewLocalFS("/", files...)
@@ -132,6 +134,11 @@ func initHTTPServer(app *App) *echo.Echo {
 			return next(c)
 		}
 	})
+
+	// Register file server to serve static content
+	fileServer := app.fs.FileServer()
+	//e.GET("/public/*", echo.WrapHandler(fileServer))
+	e.GET("/web/*", echo.WrapHandler(fileServer))
 
 	registerHTTPHandlers(e)
 

@@ -68,6 +68,7 @@ func main() {
 
 	app := &App{
 		store: initDbStore(),
+		fs:    initFS(""),
 	}
 
 	// Start HTTP server
