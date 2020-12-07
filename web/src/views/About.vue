@@ -70,10 +70,6 @@ export default {
   },
   async mounted() {
     try {
-      // const headers = {
-      //   'Content-Type': 'application/json',
-      //   'Access-Control-Allow-Origin': '*',
-      // };
       axios.defaults.baseURL = 'http://localhost:8081';
       const response = await axios.get('/api/users');
       this.users = response.data;

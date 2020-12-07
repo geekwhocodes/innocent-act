@@ -1,7 +1,6 @@
 <template>
   <section>
-  <div>Dashboard</div>
-  <unicon name="500px"/>
+  <div>Decent Dashboard</div>
   </section>
 </template>
 

@@ -22,7 +22,7 @@
             </b-navbar-item>
         </template>
         <template slot="end">
-            <b-navbar-item href="#">
+            <b-navbar-item href="https://github.com/geekwhocodes/innocent-act">
                 Github
             </b-navbar-item>
         </template>
@@ -57,7 +57,6 @@ export default Vue.extend({
     };
   },
   methods: {
-
   },
 
   computed: {
