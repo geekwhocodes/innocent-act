@@ -10,7 +10,7 @@ import (
 func registerHTTPHandlers(e *echo.Echo) {
 	//home page
 	e.GET("/", handleIndexPage)
-
+	e.GET("health", handlerHealth)
 	// users
 	e.POST("api/users", handlerCreateUser)
 	e.GET("api/users", handlerGetUsers)
@@ -32,6 +32,6 @@ func handleIndexPage(c echo.Context) error {
 	return c.String(http.StatusOK, string(b))
 }
 
-func httpErrorHandler(err error, c echo.Context) {
-	// redirect 404
+func handlerHealth(c echo.Context) error {
+	return c.String(http.StatusOK, "ok")
 }
