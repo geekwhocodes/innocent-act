@@ -7,7 +7,7 @@ GOGET=$(GOCMD) get
 
 # Versioning
 LAST_COMMIT := $(shell git rev-parse --short HEAD)
-VERSION := $(shell git describe --tags --always --dirty)
+VERSION := $(shell git describe --tags --always --abbrev=8)
 BUILD_DATE := $(shell date '+%Y-%m-%d %H:%M:%S')
 BUILD := ${LAST_COMMIT}
 
@@ -45,7 +45,7 @@ deps:
 # Build vue app at web/dist
 .PHONY: build-frontend
 build-frontend:
-	cd web && yarn build
+	set VUE_APP_VERSION=${VUE_APP_VERSION} && cd web && yarn build
 
 # Run tests.
 .PHONY: test
