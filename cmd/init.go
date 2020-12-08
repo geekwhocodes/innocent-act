@@ -62,6 +62,7 @@ func initFS(dir string) stuffbin.FileSystem {
 		log.Printf("unable to initialize embedded filesystem: %v", err)
 		files := []string{
 			"config.sample.yaml",
+			"schema.sql",
 			"web/dist/web:web",
 			"web/dist/favicon.ico:/web/favicon.ico",
 		}

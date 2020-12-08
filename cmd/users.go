@@ -11,13 +11,13 @@ import (
 
 func handlerCreateUser(c echo.Context) error {
 	app := c.Get("app").(*App)
-	u := new(models.User)
+	u := new(models.Users)
 	if err := c.Bind(u); err != nil {
 		return err
 	}
 	user, err := app.store.CreateUser(u)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "error")
+		return c.JSON(http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusCreated, user)
 }

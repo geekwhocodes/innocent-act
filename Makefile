@@ -20,8 +20,10 @@ GOARCH="amd64"
 
 # Static files to stuff in 
 STATIC := config.sample.yaml \
+	schema.sql \
 	web/dist/web:web \
 	web/dist/favicon.ico:/web/favicon.ico \
+
 
 VUE_APP_VERSION=${VERSION}
 
@@ -66,7 +68,7 @@ clean:
 # stuff in static files in ${BIN}
 .PHONY: stuffin
 stuffin: 
-	stuffbin -a stuff -in ${BIN} -out ${BIN} ${STATIC}
+	stuffbin -a stuff -in ${BIN}.exe -out ${BIN} ${STATIC}
 
 # Bundle all static assets including the JS frontend into the ./listmonk binary
 # using stuffbin (installed with make deps).
@@ -77,5 +79,5 @@ all: build-win build-frontend stuffin
 # Bundle all static assets including the JS frontend into the ./listmonk binary
 # using stuffbin (installed with make deps).
 .PHONY: all-linux
-all: build-linux build-frontend stuffin
+all-linux: build-linux build-frontend stuffin
 	stuffbin -a stuff -in ${BIN} -out ${BIN} ${STATIC}

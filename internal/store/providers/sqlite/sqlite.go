@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -8,8 +9,8 @@ import (
 	"time"
 
 	"github.com/geekwhocodes/innocent-relay/models"
-	"github.com/jmoiron/sqlx"
-	"gopkg.in/volatiletech/null.v6"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/sqlite3"
 )
 
 // Options .
@@ -20,7 +21,8 @@ type Options struct {
 
 // Client implements `store.Store`
 type Client struct {
-	db *sqlx.DB
+	db         *reform.DB
+	connection *sql.DB
 }
 
 // GetEmail .s
@@ -29,35 +31,37 @@ func (store *Client) GetEmail() string {
 }
 
 // CreateUser .s
-func (store *Client) CreateUser(u *models.User) (*models.User, error) {
-	fmt.Println("Creating user.", u.Name())
-	sqlStatement, _ := store.db.Prepare("INSERT INTO users (firstname, lastname, email, website, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)")
-	u.CreatedAt, u.UpdatedAt = null.NewTime(time.Now(), true), null.NewTime(time.Now(), true)
+func (store *Client) CreateUser(u *models.Users) (*models.Users, error) {
+	fmt.Println("Creating user.", u)
+	sqlStatement, _ := store.connection.Prepare("INSERT INTO users (firstname, lastname, email, website, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)")
+	now := time.Now()
+	u.CreatedAt, u.UpdatedAt = &now, &now
 	result, err := sqlStatement.Exec(u.FirstName, u.LastName, u.Email, u.Website, u.CreatedAt, u.UpdatedAt)
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
 		return nil, err
 	}
 	id, _ := result.LastInsertId()
-	u.ID = int(id)
+	u.ID = int64(id)
 	return u, nil
 }
 
 // GetAllUsers returns all users in db
-func (store *Client) GetAllUsers() ([]*models.User, error) {
+func (store *Client) GetAllUsers() ([]*models.Users, error) {
 	sqlStatement := "SELECT * FROM users"
-	rows, err := store.db.Query(sqlStatement)
-	result := []*models.User{}
+	rows, err := store.db.Querier.Query(sqlStatement)
+	result := []*models.Users{}
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
 		return result, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		user := &models.User{}
+		user := &models.Users{}
 		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Website, &user.CreatedAt, &user.UpdatedAt); err != nil {
-			log.Fatal(err)
+			//log.Fatal(err)
+			log.Print(err)
 		}
 		result = append(result, user)
 	}
@@ -65,23 +69,23 @@ func (store *Client) GetAllUsers() ([]*models.User, error) {
 }
 
 // GetPaginatedUsers returns paginated results
-func (store *Client) GetPaginatedUsers(page int) ([]*models.User, error) {
+func (store *Client) GetPaginatedUsers(page int) ([]*models.Users, error) {
 	limit := 10
 	offset := limit * (page - 1)
 
 	sqlStatement := `SELECT * FROM "users" ORDER BY "id" LIMIT $1 OFFSET $2`
-	rows, err := store.db.Queryx(sqlStatement, limit, offset)
-	result := []*models.User{}
+	rows, err := store.db.Query(sqlStatement, limit, offset)
+	result := []*models.Users{}
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 		return result, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		user := &models.User{}
+		user := &models.Users{}
 		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Website, &user.CreatedAt, &user.UpdatedAt); err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 		result = append(result, user)
 	}
@@ -90,7 +94,7 @@ func (store *Client) GetPaginatedUsers(page int) ([]*models.User, error) {
 
 // Close .
 func (store *Client) Close() error {
-	if err := store.db.Close(); err != nil {
+	if err := store.connection.Close(); err != nil {
 		return err
 	}
 	return nil
@@ -100,52 +104,23 @@ func (store *Client) Close() error {
 func NewDb(options *Options) (*Client, error) {
 	dbPath := filepath.Join(options.Path, options.Name+".db")
 	fmt.Println("initializing db at ", dbPath)
-	// remove existing db file
-	if err := validatePath(dbPath); err == nil {
-		if err = os.Remove(dbPath); err != nil {
-			return nil, err
-		}
-	}
-	db, err := sqlx.Connect("sqlite3", dbPath)
+	sqlDB, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		log.Fatalln(err)
-		return nil, err
+		log.Print(err)
 	}
-	if err := createSchema(db); err != nil {
-		log.Fatalln(err)
-		return nil, err
-	}
-	if err = db.Ping(); err != nil {
+	//defer sqlDB.Close()
+	// Use new *log.Logger for logging.
+	logger := log.New(os.Stderr, "SQL: ", log.Flags())
+	// Create *reform.DB instance with simple logger.
+	// Any Printf-like function (fmt.Printf, log.Printf, testing.T.Logf, etc) can be used with NewPrintfLogger.
+	// Change dialect for other databases.
+	db := reform.NewDB(sqlDB, sqlite3.Dialect, reform.NewPrintfLogger(logger.Printf))
+
+	if err = sqlDB.Ping(); err != nil {
 		return nil, err
 	}
 	return &Client{
-		db: db,
+		db:         db,
+		connection: sqlDB,
 	}, nil
-}
-
-func validatePath(path string) error {
-	s, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if s.IsDir() {
-		return fmt.Errorf("'%s' is a directory, not a normal file", path)
-	}
-	return nil
-}
-
-func createSchema(db *sqlx.DB) error {
-	var schema = `
-		DROP TABLE IF EXISTS user;
-		CREATE TABLE users (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				firstname VARCHAR(64) NULL,
-				lastname VARCHAR(64) NULL,
-				email VARCHAR(64) NULL,
-				website VARCHAR(32) NULL,
-				createdAt DATE NULL,
-				updatedAt DATE NULL
-		);`
-	db.MustExec(schema)
-	return nil
 }
