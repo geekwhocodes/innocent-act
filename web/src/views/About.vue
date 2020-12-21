@@ -43,17 +43,13 @@ export default {
       checkedRows: [],
       columns: [
         {
-          field: 'id',
+          field: 'ID',
           label: 'ID',
           numeric: true,
         },
         {
-          field: 'firstname',
-          label: 'First Name',
-        },
-        {
-          field: 'lastname',
-          label: 'Last Name',
+          field: 'name',
+          label: 'Name',
         },
         {
           field: 'email',
@@ -70,7 +66,7 @@ export default {
   },
   async mounted() {
     try {
-      axios.defaults.baseURL = 'http://localhost:8081';
+      axios.defaults.baseURL = 'http://localhost:8083';
       const response = await axios.get('/api/users');
       this.users = response.data;
       console.log(response.data);

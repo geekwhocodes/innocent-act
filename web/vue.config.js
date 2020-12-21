@@ -19,8 +19,7 @@ module.exports = {
     port: process.env.LOWKEY_FRONTEND_PORT || 8080,
     proxy: {
       '^/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
+        target: process.env.LOWKEY_API_URL || 'http://127.0.0.1:8083'
       },
     },
   },
