@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/jmoiron/sqlx v1.2.0
 	github.com/knadh/koanf v0.14.0
 	github.com/knadh/stuffbin v1.1.0
 	github.com/labstack/echo v3.3.10+incompatible
@@ -17,6 +16,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392 // indirect
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	google.golang.org/appengine v1.6.7 // indirect
-	gopkg.in/volatiletech/null.v6 v6.0.0-20170828023728-0bef4e07ae1b
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.20.8
 )

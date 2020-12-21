@@ -59,7 +59,7 @@ func initFS(dir string) stuffbin.FileSystem {
 	if err != nil {
 		// Running in local mode. Load local assets into
 		// the in-memory stuffbin.FileSystem.
-		log.Printf("unable to initialize embedded filesystem: %v", err)
+		// log.Printf("unable to initialize embedded filesystem: %v", err)
 		files := []string{
 			"config.sample.yaml",
 			"web/dist/web:web",
@@ -124,7 +124,6 @@ func initHTTPServer(app *App) *echo.Echo {
 
 	e := echo.New()
 	e.HideBanner = true
-
 	e.Use(middleware.CORS())
 
 	// Inject our App context to all http handlers
