@@ -2,8 +2,15 @@ package main
 
 import (
 	"net/http"
+	"regexp"
 
+	"github.com/geekwhocodes/innocent-relay/models"
 	"github.com/labstack/echo"
+)
+
+var (
+	strInputSize = 128
+	emailRegexp  = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 )
 
 // RegisterHandlers d
@@ -13,6 +20,7 @@ func registerHTTPHandlers(e *echo.Echo) {
 	e.GET("health", handlerHealth)
 	// users
 	e.POST("api/users", handlerCreateUser)
+	e.GET("api/users/:id", handlerGetUser)
 	e.GET("api/users", handlerGetUsers)
 
 	// static routes
@@ -33,5 +41,5 @@ func handleIndexPage(c echo.Context) error {
 }
 
 func handlerHealth(c echo.Context) error {
-	return c.String(http.StatusOK, "ok")
+	return c.JSON(http.StatusOK, models.OkResponse{Data: "ok"})
 }

@@ -1,27 +1,23 @@
 package models
 
 import (
-	"fmt"
-	_ "fmt"
+	"strings"
 
-	null "gopkg.in/volatiletech/null.v6"
+	"gorm.io/gorm"
 )
 
-// Base model properties are shared with all models
-type Base struct {
-	ID        int       `json:"id"`
-	CreatedAt null.Time `json:"createdAt"`
-	UpdatedAt null.Time `json:"updatedAt"`
+// OkResponse data interface while returning data to the client
+type OkResponse struct {
+	Data interface{} `json:"data"`
 }
 
 // User represents user in lowkey system
 type User struct {
-	Base
+	gorm.Model
 
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-	Email     string `json:"email"`
-	Website   string `json:"website"`
+	Name    string `json:"name"`
+	Email   string `json:"email" gorm:"index;unique;not null"`
+	Website string `json:"website"`
 }
 
 // Users represents collection of user
@@ -29,7 +25,14 @@ type Users struct {
 	Users []User `json:"users"`
 }
 
-// Name returns Full name of user by concating first & last name
-func (u User) Name() string {
-	return fmt.Sprintf("%s %s", u.FirstName, u.LastName)
+// FirstName it splits name string by space char and
+// returns first part of the split if it's lenght is greater than 3
+// assuming that the first part is user's first name
+func (u User) FirstName() string {
+	for _, u := range strings.Split(u.Name, " ") {
+		if len(u) > 3 {
+			return u
+		}
+	}
+	return u.Name
 }
